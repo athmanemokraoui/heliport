@@ -121,22 +121,32 @@ jobs:
     needs: [linux, macos, windows, sdist]
     steps:
       - uses: actions/download-artifact@v7
+
       - name: Display downloaded files
         run: ls -R
+
+      # NEW: Flatten all artifacts into a single dist/ folder
+      - name: Collect all wheels
+        run: |
+          mkdir -p dist
+          cp wheels-*/* dist/ 2>/dev/null || true
+          ls -R dist/
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v3
         with:
-          subject-path: 'wheels-*/**'
+          subject-path: 'dist/*'
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
-      - name: Publish to PyPI
-        run: uv publish 'wheels-*/**'
 
-      # Publish ONLY Linux x86_64 wheel to GitHub Release
+      # FIXED: Publish from the flat dist/ folder
+      - name: Publish to PyPI
+        run: uv publish dist/*
+
+      # FIXED: Attach only Linux wheel to GitHub Release
       - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: wheels-linux-x86_64/**
+          files: dist/*linux*.whl
           generate_release_notes: true
